@@ -76,9 +76,10 @@ sdd-install /path/to/your/repo
 ./install.sh /path/to/your/repo [--track-state]
 ```
 
-All methods copy `template/.opencode/` into the target (never overwrites existing
-files) and adds `.sdd/runs/` to `.gitignore` (use `--track-state` to version
-state instead). Restart opencode in the target repo afterwards.
+All methods copy `template/.opencode/` into the target, overwriting existing
+files to ensure you always have the latest version, and adds `.sdd/runs/` to
+`.gitignore` (use `--track-state` to version state instead). Restart opencode
+in the target repo afterwards.
 
 ## Usage
 

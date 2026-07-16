@@ -29,7 +29,6 @@ Examples:
 }
 
 function findTemplateDir() {
-  // Try multiple locations to support both local dev and npx installs
   const candidates = [
     TEMPLATE_DIR,
     path.join(SCRIPT_DIR, '..', 'template'),
@@ -47,9 +46,9 @@ function findTemplateDir() {
   process.exit(1);
 }
 
-function copyFiles(srcDir, dstDir, skipExisting = true) {
+function copyFiles(srcDir, dstDir) {
   let copied = 0;
-  let skipped = 0;
+  let updated = 0;
 
   function walk(currentSrc, currentDst) {
     const entries = fs.readdirSync(currentSrc, { withFileTypes: true });
@@ -64,25 +63,27 @@ function copyFiles(srcDir, dstDir, skipExisting = true) {
         }
         walk(srcPath, dstPath);
       } else if (entry.isFile()) {
-        if (fs.existsSync(dstPath) && skipExisting) {
-          console.log(`  SKIP (exists): ${path.relative(TEMPLATE_DIR, srcPath)}`);
-          skipped++;
-          continue;
-        }
-
         const parentDir = path.dirname(dstPath);
         if (!fs.existsSync(parentDir)) {
           fs.mkdirSync(parentDir, { recursive: true });
         }
 
+        const exists = fs.existsSync(dstPath);
         fs.copyFileSync(srcPath, dstPath);
-        copied++;
+
+        if (exists) {
+          console.log(`  UPDATE: ${path.relative(TEMPLATE_DIR, srcPath)}`);
+          updated++;
+        } else {
+          console.log(`  COPY:   ${path.relative(TEMPLATE_DIR, srcPath)}`);
+          copied++;
+        }
       }
     }
   }
 
   walk(srcDir, dstDir);
-  return { copied, skipped };
+  return { copied, updated };
 }
 
 function addToGitignore(repoDir) {
@@ -98,7 +99,6 @@ function addToGitignore(repoDir) {
       return;
     }
   } catch {
-    // .gitignore doesn't exist yet, we'll create it
   }
 
   fs.appendFileSync(gitignorePath, entry + '\n');
@@ -113,9 +113,9 @@ function installGlobal() {
   }
 
   const srcDir = findTemplateDir();
-  const { copied, skipped } = copyFiles(srcDir, GLOBAL_TARGET);
+  const { copied, updated } = copyFiles(srcDir, GLOBAL_TARGET);
 
-  console.log(`\n==> Copied ${copied} file(s), skipped ${skipped} existing file(s)`);
+  console.log(`\n==> ${copied} new, ${updated} updated`);
   console.log('==> Installed to ' + GLOBAL_TARGET);
   console.log('    Restart opencode to use /sdd in any repository.');
 }
@@ -132,9 +132,9 @@ function installLocal(repoDir, trackState) {
 
   const srcDir = findTemplateDir();
   const dstDir = path.join(targetDir, '.opencode');
-  const { copied, skipped } = copyFiles(srcDir, dstDir);
+  const { copied, updated } = copyFiles(srcDir, dstDir);
 
-  console.log(`\n==> Copied ${copied} file(s), skipped ${skipped} existing file(s)`);
+  console.log(`\n==> ${copied} new, ${updated} updated`);
 
   if (trackState) {
     console.log('==> --track-state: .sdd/runs/ will NOT be added to .gitignore');
