@@ -120,6 +120,9 @@ Each task: `.sdd/runs/<task-id>/`:
 - Subagent: `sdd-implementer`
 - Report: `.sdd/runs/<task-id>/implementer-report.md`
 - Status codes: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+- **TDD is mandatory.** The implementer works in RED → GREEN cycles.
+  The report must include RED + GREEN evidence for every feature. The
+  task-reviewer and code-reviewer verify this.
 - If BLOCKED/NEEDS_CONTEXT: resolve and re-dispatch.
 
 ### Step 2: task-reviewer
@@ -127,6 +130,7 @@ Each task: `.sdd/runs/<task-id>/`:
 - Subagent: `sdd-task-reviewer`
 - Report: `.sdd/runs/<task-id>/task-review.md`
 - Verdict: `approved` | `changes_requested`
+- Checks: spec compliance, TDD evidence, standards. Three axes.
 
 ### Step 3: fixer
 
@@ -139,6 +143,8 @@ Each task: `.sdd/runs/<task-id>/`:
 - Subagent: `sdd-code-reviewer`
 - Report: `.sdd/runs/<task-id>/code-review.md`
 - Verdict: `approved` | `changes_requested`
+- Checks: code quality, test quality, standards, YAGNI scope, Fowler smells.
+  Five axes.
 
 ### Step 5: verifier
 

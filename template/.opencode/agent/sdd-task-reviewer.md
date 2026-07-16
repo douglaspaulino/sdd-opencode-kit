@@ -32,7 +32,18 @@ You receive the task file, the implementer report, and prior step data.
 - Features not requested (YAGNI / scope creep)
 - Edge cases mentioned in the spec but not handled
 
-### Axis 2 — Standards
+### Axis 2 — TDD evidence
+
+- Does the implementer report include RED + GREEN output for each
+  feature?
+- Does the RED output show the expected failure (not a syntax error or
+  unrelated crash)?
+- Does the GREEN output show the test passing after implementation?
+- **Missing or fake TDD evidence → Important issue.** Tests written
+  after code, RED output that doesn't match the feature, or GREEN output
+  with no corresponding RED are all findings.
+
+### Axis 3 — Standards
 
 - Does the code follow existing conventions in this repo?
 - If a `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, cite it.

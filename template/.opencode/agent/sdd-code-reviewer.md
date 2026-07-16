@@ -28,14 +28,22 @@ fixer report, and the diff file path (read it once).
 - Performance: unnecessary allocations, N+1 queries
 - Security: injection risks, exposed secrets
 
-### Axis 2 — Standards
+### Axis 2 — Test quality
+
+- Do tests exercise behavior through public interfaces (not internals)?
+- Are assertions independent, not tautological (expected = recomputed)?
+- Do tests avoid implementation-coupled mocks?
+- Does each test verify one thing clearly?
+- Are edge cases from the spec covered?
+
+### Axis 3 — Standards
 
 - Adherence to repo conventions (`CODING_STANDARDS.md`, `CONTRIBUTING.md`)
 - **Repo standards override the smells below.** If a documented standard
   endorses something the smells would flag, suppress the smell.
 - **Skip anything tooling already enforces** (linter, formatter, type-checker).
 
-### Axis 3 — Scope (YAGNI)
+### Axis 4 — Scope (YAGNI)
 
 - Every function, type, interface, and file must be traceable to a
   requirement in the task spec. Report anything not requested.
@@ -77,7 +85,7 @@ What was done well (be specific).
 
 ### Issues
 #### Critical (bug, data loss, security)
-#### Important (should fix: missing tests, YAGNI violations, poor error handling, smell for new code)
+#### Important (should fix: missing/bad tests, YAGNI violations, poor error handling, smell for new code)
 #### Minor (naming, style, docs, existing-code smells)
 
 Each issue: `file:line` — what — why — fix.

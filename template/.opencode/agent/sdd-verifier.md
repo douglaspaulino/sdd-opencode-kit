@@ -18,6 +18,9 @@ Task file, all prior step reports, attempt number, max attempts (3).
 
 ## What to do
 
+- Read all prior reports. Check: does the implementer report include
+  TDD evidence (RED + GREEN output) for each feature? If not, note it
+  as a finding — the task-reviewer should have caught this.
 - Identify test/build/lint commands from project config.
 - Run the full test suite.
 - Run type-checking and linting if configured.
