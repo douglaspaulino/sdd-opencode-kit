@@ -80,6 +80,36 @@ without touching the agent files:
 
 Copy an entire preset block from below into your `opencode.json`.
 
+### Setting model variants
+
+For models that support reasoning-effort variants (e.g. `low`, `medium`,
+`high`), you can also set the `variant` field per agent. This controls
+how much compute the model spends "thinking" before responding:
+
+```json
+{
+  "agent": {
+    "sdd-implementer":   { "model": "opencode-go/glm-5.2",  "variant": "high" },
+    "sdd-code-reviewer": { "model": "opencode-go/glm-5.2",  "variant": "high" },
+    "sdd-task-reviewer": { "model": "opencode-go/glm-5.2",  "variant": "medium" },
+    "sdd-fixer":         { "model": "opencode-go/glm-5.2",  "variant": "medium" },
+    "sdd-verifier":      { "model": "opencode-go/glm-5.2",  "variant": "low" }
+  }
+}
+```
+
+| Role | Recommended variant | Why |
+|---|---|---|
+| implementer | `high` | Needs deep reasoning for architecture, patterns, edge cases |
+| code-reviewer | `high` | Scans diff for Fowler smells, bugs, YAGNI — most complex judgment |
+| task-reviewer | `medium` | Spec compliance check: structured task, less open-ended |
+| fixer | `medium` | Targeted fixes with reviewer guidance — narrower scope |
+| verifier | `low` | Runs tests, checks output — mechanical, not creative |
+
+> Not all models expose variants. Check your provider's docs. Some models
+> encode tier in the name itself (e.g. `qwen3.7-max`). For those, swap the
+> `model` field instead of setting `variant`.
+
 ## Model presets
 
 ### opencode go (subscription, request quotas)
