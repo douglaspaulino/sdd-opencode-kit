@@ -11,23 +11,24 @@ $ARGUMENTS = single file or directory.
 - Directory: glob `$ARGUMENTS/*.md`, sorted alphabetically.
 - No tasks → tell user, stop.
 
-## Worktree setup
+## Branch setup
 
 Before any task execution, ask the user:
 
-> Create an isolated git worktree for this SDD run? (y/n)
+> Create a new branch for this SDD run? (y/n)
 
 If **yes**:
 1. Record the current branch: `ORIG_BRANCH=$(git branch --show-current)`.
    If in detached HEAD, ask the user which branch to merge back to.
-2. Create a new branch: `git checkout -b sdd/<slug-from-first-task>`.
-3. Store worktree metadata in `.sdd/worktree.json`:
+2. Create and switch to a new branch:
+   `git checkout -b sdd/<slug-from-first-task>`.
+3. Store metadata in `.sdd/branch.json`:
    ```json
-   { "original_branch": "main", "worktree_branch": "sdd/issue-42" }
+   { "original_branch": "main", "sdd_branch": "sdd/issue-42" }
    ```
 4. All subsequent work happens on this branch.
 
-If **no**: work on the current branch directly. Skip worktree metadata.
+If **no**: work on the current branch directly. Skip branch metadata.
 
 ## Pre-flight
 
@@ -58,17 +59,17 @@ complete are done, do not re-dispatch them.
 
 Print table: task file, final status, step of failure (if any), attempts.
 
-## Worktree teardown
+## Branch teardown
 
-If a worktree was created (`.sdd/worktree.json` exists):
+If a branch was created (`.sdd/branch.json` exists):
 
-1. Print the worktree branch name and completion status for all tasks.
+1. Print the branch name and completion status for all tasks.
 2. Ask the user:
    > Merge `sdd/<branch>` back into `<original_branch>`? (y/n)
 3. If **yes**:
    - `git checkout <original_branch>`
    - `git merge sdd/<branch> --no-ff -m "sdd: merge completed SDD cycle"`
    - `git branch -d sdd/<branch>`
-   - `rm .sdd/worktree.json`
-4. If **no**: leave the branch as-is for manual review. Tell the user
+   - `rm .sdd/branch.json`
+4. If **no**: stay on the SDD branch for manual review. Tell the user
    the branch name and how to merge or discard it.

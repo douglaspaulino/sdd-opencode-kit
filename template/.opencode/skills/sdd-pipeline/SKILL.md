@@ -33,12 +33,11 @@ edit code (permission-enforced, not prompt-level).
   `git log` over your own recollection. Never re-execute a task the
   ledger marks complete.
 
-- **Worktree lifecycle.** At `/sdd` start, ask the user whether to create
-  an isolated git worktree (new branch, clean workspace). If yes: record
-  the original branch in `.sdd/worktree.json`, create branch
-  `sdd/<slug>`, and work there. After all tasks complete, ask whether to
-  merge back into the original branch with `--no-ff`. If the user
-  declines, leave the branch for manual review.
+- **Branch lifecycle.** At `/sdd` start, ask the user whether to create
+  a new branch for the run. If yes: record the original branch in
+  `.sdd/branch.json`, create `sdd/<slug>`, and work there. After all
+  tasks complete, ask whether to merge back with `--no-ff`. If declined,
+  leave the branch for manual review.
 
 - **CONTEXT.md.** If `CONTEXT.md` exists at the project root, include its
   path in every subagent dispatch. It maps project jargon to short terms
