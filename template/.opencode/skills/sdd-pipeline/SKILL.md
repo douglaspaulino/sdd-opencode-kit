@@ -3,21 +3,43 @@ name: sdd-pipeline
 description: Use ONLY when executing the /sdd command to process task files through a mandatory 5-step SDD pipeline. Defines pipeline contract, state schema, step order, transition rules, and subagent roles.
 ---
 
-# SDD Pipeline Contract
+# SDD Pipeline
 
-This skill defines the mandatory Spec-Driven Development pipeline used by
-the `/sdd` command. Every task goes through exactly 5 steps in strict
-order:
+Mandatory 5-step pipeline:
 
     implementer → task-reviewer → fixer → code-reviewer → verifier
 
-No step may be skipped. The fixer always runs — even when reviewers
-approve (it confirms the conclusion). Reviewers and the verifier cannot
-edit code (enforced at the permission level, not prompt level).
+No step may be skipped. Fixer always runs. Reviewers and verifier cannot
+edit code (permission-enforced, not prompt-level).
+
+## Controller discipline
+
+- **Narrate at most one short line between tool calls.** Tool results
+  carry the record.
+- **Continuous execution.** Do not stop between tasks to check in.
+  Execute all tasks without pausing. Stop only for: BLOCKED, ambiguity
+  that prevents progress, or all tasks complete.
+- **File handoffs.** Pass task content and prior reports as file paths,
+  never as pasted text. Your context stays lean; subagents read what they
+  need.
+- **Progress ledger.** Before starting and after each task, write a line
+  to `.sdd/ledger.md`:
+
+  ```
+  Task <task-id>: <status> (<short SHA>..<short SHA>)
+  ```
+
+  The ledger survives compaction. After a compact, trust the ledger and
+  `git log` over your own recollection. Never re-execute a task the
+  ledger marks complete.
+
+- **CONTEXT.md.** If `CONTEXT.md` exists at the project root, include its
+  path in every subagent dispatch. It maps project jargon to short terms
+  and keeps code and reviews concise.
 
 ## State file
 
-Each task has a run directory at `.sdd/runs/<task-id>/` containing:
+Each task: `.sdd/runs/<task-id>/`:
 
 ```
 .sdd/runs/<task-id>/
@@ -29,10 +51,9 @@ Each task has a run directory at `.sdd/runs/<task-id>/` containing:
 └── verifier-report.md
 ```
 
-The **task-id** is derived from the task filename: lowercase,
-path-safe characters only, hyphen-separated.
+`task-id` = filename, lowercase, hyphens, path-safe.
 
-### state.json schema
+### state.json
 
 ```json
 {
@@ -80,86 +101,72 @@ path-safe characters only, hyphen-separated.
 }
 ```
 
-## Step execution rules
+## Step execution
 
 ### General rules
 
-1. Steps execute in sequential order. Never parallelize.
-2. Before running a step, set its status to `in_progress` and set
-   `started_at`. After completion, set status to `completed` (or
-   `failed`) and set `finished_at`. Write the step report to the
-   specified path.
-3. Every step receives as context:
-   - The full content of the original task file
-   - The reports of all previously completed steps
-   - The current attempt number
+1. Sequential only. Never parallelize steps.
+2. Set status to `in_progress` + `started_at` before running. Set
+   `completed`/`failed` + `finished_at` after. Write report.
+3. Each step receives: task file path, prior report paths, attempt
+   number, CONTEXT.md path (if exists).
 4. Update `state.json` after EVERY step. Never batch.
 5. Update `updated_at` on every state change.
-6. After each step, update the task-level `status`:
-   - `in_progress` while any step is pending or running
-   - `completed` when verifier passes
-   - `failed` when max attempts exhausted with verifier failing
+6. Task-level `status`: `in_progress` while pending, `completed` on
+   verifier pass, `failed` on max attempts exhausted.
 
 ### Step 1: implementer
 
 - Subagent: `sdd-implementer`
-- Purpose: write code to satisfy the task specification
-- Report path: `.sdd/runs/<task-id>/implementer-report.md`
+- Report: `.sdd/runs/<task-id>/implementer-report.md`
+- Status codes: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+- If BLOCKED/NEEDS_CONTEXT: resolve and re-dispatch.
 
 ### Step 2: task-reviewer
 
 - Subagent: `sdd-task-reviewer`
-- Purpose: verify implementation matches task specification
-- Report path: `.sdd/runs/<task-id>/task-review.md`
-- `verdict` field: must be `approved` or `changes_requested`
-- Cannot edit code (permission enforced)
+- Report: `.sdd/runs/<task-id>/task-review.md`
+- Verdict: `approved` | `changes_requested`
 
 ### Step 3: fixer
 
 - Subagent: `sdd-fixer`
-- Purpose: apply reviewer feedback
-- Report path: `.sdd/runs/<task-id>/fixer-report.md`
-- Always runs — even when both reviewers approved. If approved with no
-  issues, fixer confirms and reports "nothing to fix — approved as-is"
+- Report: `.sdd/runs/<task-id>/fixer-report.md`
+- Always runs. If approved with no issues, confirms.
 
 ### Step 4: code-reviewer
 
 - Subagent: `sdd-code-reviewer`
-- Purpose: review code quality, bugs, style, architecture
-- Report path: `.sdd/runs/<task-id>/code-review.md`
-- `verdict` field: must be `approved` or `changes_requested`
-- Cannot edit code (permission enforced)
+- Report: `.sdd/runs/<task-id>/code-review.md`
+- Verdict: `approved` | `changes_requested`
 
 ### Step 5: verifier
 
 - Subagent: `sdd-verifier`
-- Purpose: run tests, build, lint; final pass/fail
-- Report path: `.sdd/runs/<task-id>/verifier-report.md`
-- `verdict` field: must be `pass` or `fail`
-- Cannot edit code (permission enforced)
-- Has bash access to run tests and build commands
+- Report: `.sdd/runs/<task-id>/verifier-report.md`
+- Verdict: `pass` | `fail`
 
 ## Verifier reject loop
 
-If the verifier verdict is `fail` and `attempts < max_attempts` (3):
+If `fail` and `attempts < max_attempts` (3):
 
-1. Increment `attempts` by 1
-2. Reset the following steps to `pending`: fixer, code-reviewer, verifier
-3. Pass the verifier report as additional context to the fixer
-4. Re-run fixer → code-reviewer → verifier in order
+1. Increment `attempts`
+2. Reset fixer, code-reviewer, verifier to `pending`
+3. Pass verifier report to fixer as additional context
+4. Re-run fixer → code-reviewer → verifier
 
-If `attempts >= max_attempts` with verifier still `fail`:
-- Mark the task `status` as `failed`
-- Do NOT retry further
-- Move to the next task
+If `attempts >= max_attempts` with verifier `fail`:
+- Mark task `failed`, move to next.
 
-## Subagent context
+## Subagent dispatch
 
-When invoking subagents via the Task tool, always pass:
+When using the Task tool, pass:
 
-- The full task file content (read via Read tool first)
-- All prior step report contents (read via Read tool first)
-- Clear instructions on expected output paths and required fields
+- Task file path
+- Prior report paths (not contents)
+- CONTEXT.md path (if exists)
+- Current attempt number
+- Expected report path
 
-Each subagent writes its own report using the Write tool to the path
-specified by the orchestrator.
+Each subagent writes its own report. Reports are handoff — the next
+subagent reads them as files.

@@ -48,6 +48,21 @@ state instead). Restart opencode in the target repo afterwards.
 /sdd tasks/                 # every *.md in the directory
 ```
 
+### Optional: create a CONTEXT.md
+
+A `CONTEXT.md` file in the project root acts as a shared vocabulary for all
+subagents. Map project jargon to short terms:
+
+```md
+# CONTEXT.md
+
+- **authn** — the authentication layer (replaces "UserAuthenticationServiceFactoryProvider")
+- **materialize** — giving a lesson a real spot on disk (instead of "creating file system entries for course content")
+```
+
+The implementer reads this first to produce concise, consistently-named code.
+Code reviews reference these terms to avoid report verbosity.
+
 ## Customizing models
 
 The kit ships with the **Go 3 — High volume** preset as default. Every model
@@ -186,3 +201,12 @@ implementation and review to avoid self-approval bias.
   }
 }
 ```
+
+## Inspiration
+
+This project draws from two standout agent-skills methodology repos:
+
+| Project | Link | Key ideas adopted |
+|---|---|---|
+| **Matt Pocock Skills** | [mattpocock/skills](https://github.com/mattpocock/skills) | Two-axis review (Spec vs Standards), Fowler smell baseline, shared vocabulary (`CONTEXT.md`), leading words, completion criteria, pruning discipline |
+| **Superpowers (obra)** | [obra/superpowers](https://github.com/obra/superpowers) | Subagent-driven-development, file handoffs (never paste text), progress ledger (survives compaction), YAGNI enforcement, escalation rules (BLOCKED/NEEDS_CONTEXT), self-review checklist, "follow don't explore" principle |
