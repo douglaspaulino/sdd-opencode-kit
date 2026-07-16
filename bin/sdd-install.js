@@ -11,6 +11,14 @@ const GLOBAL_TARGET = path.join(HOME_DIR, '.config', 'opencode');
 const SCRIPT_DIR = __dirname;
 const TEMPLATE_DIR = path.join(SCRIPT_DIR, '..', 'template');
 
+const SDD_AGENTS_CONFIG = {
+  'sdd-implementer':   { hidden: true },
+  'sdd-code-reviewer': { hidden: true },
+  'sdd-task-reviewer': { hidden: true },
+  'sdd-fixer':         { hidden: true },
+  'sdd-verifier':      { hidden: true }
+};
+
 function showUsage() {
   console.log(`
 Usage: sdd-install [options] [target]
@@ -105,6 +113,60 @@ function addToGitignore(repoDir) {
   console.log('==> Added .sdd/runs/ to .gitignore');
 }
 
+function mergeOpencodeConfig(targetDir) {
+  const jsonPath = path.join(targetDir, 'opencode.json');
+  const jsoncPath = path.join(targetDir, 'opencode.jsonc');
+  
+  let configPath = null;
+  let isJsonc = false;
+  
+  if (fs.existsSync(jsonPath)) {
+    configPath = jsonPath;
+  } else if (fs.existsSync(jsoncPath)) {
+    configPath = jsoncPath;
+    isJsonc = true;
+  }
+  
+  let config = {};
+  
+  if (configPath) {
+    try {
+      let content = fs.readFileSync(configPath, 'utf-8');
+      // Strip line comments (// ...) but not inside strings
+      // Simple approach: only strip // that are not inside quoted strings
+      content = content.replace(/(^|[^:"\w])\/\/.*$/gm, '$1').replace(/\/\*[\s\S]*?\*\//g, '');
+      config = JSON.parse(content);
+    } catch (err) {
+      console.error(`Warning: Could not parse ${configPath}: ${err.message}`);
+      console.log('==> Skipping opencode.json merge');
+      return;
+    }
+  } else {
+    configPath = jsonPath;
+  }
+  
+  // Ensure agent object exists
+  if (!config.agent) {
+    config.agent = {};
+  }
+  
+  // Merge SDD agents config
+  for (const [agentName, agentConfig] of Object.entries(SDD_AGENTS_CONFIG)) {
+    if (!config.agent[agentName]) {
+      config.agent[agentName] = {};
+    }
+    config.agent[agentName].hidden = agentConfig.hidden;
+  }
+  
+  // Add schema if not present
+  if (!config.$schema) {
+    config.$schema = 'https://opencode.ai/config.json';
+  }
+  
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+  console.log(`==> Updated ${path.relative(targetDir, configPath)} with SDD agents hidden config`);
+}
+
 function installGlobal() {
   console.log('==> Installing SDD kit globally...\n');
 
@@ -116,6 +178,9 @@ function installGlobal() {
   const { copied, updated } = copyFiles(srcDir, GLOBAL_TARGET);
 
   console.log(`\n==> ${copied} new, ${updated} updated`);
+  
+  mergeOpencodeConfig(GLOBAL_TARGET);
+  
   console.log('==> Installed to ' + GLOBAL_TARGET);
   console.log('    Restart opencode to use /sdd in any repository.');
 }
@@ -135,6 +200,8 @@ function installLocal(repoDir, trackState) {
   const { copied, updated } = copyFiles(srcDir, dstDir);
 
   console.log(`\n==> ${copied} new, ${updated} updated`);
+
+  mergeOpencodeConfig(targetDir);
 
   if (trackState) {
     console.log('==> --track-state: .sdd/runs/ will NOT be added to .gitignore');
