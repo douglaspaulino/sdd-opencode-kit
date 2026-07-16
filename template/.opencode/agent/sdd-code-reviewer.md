@@ -1,7 +1,8 @@
 ---
 description: SDD pipeline code-reviewer — reviews code quality, bugs, style, and architecture.
 mode: subagent
-model: opencode-go/kimi-k2.6
+model: opencode-go/deepseek-v4-pro
+hidden: true
 permission:
   edit: deny
   read: allow

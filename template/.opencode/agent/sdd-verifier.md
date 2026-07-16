@@ -2,6 +2,7 @@
 description: SDD pipeline verifier — runs tests, build, and gives the final pass/fail verdict.
 mode: subagent
 model: opencode-go/deepseek-v4-flash
+hidden: true
 permission:
   edit: deny
   read: allow

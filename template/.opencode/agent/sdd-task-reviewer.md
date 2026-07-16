@@ -2,6 +2,7 @@
 description: SDD pipeline task-reviewer — verifies that the implementation matches the task specification.
 mode: subagent
 model: opencode-go/mimo-v2.5
+hidden: true
 permission:
   edit: deny
   read: allow

@@ -1,7 +1,8 @@
 ---
 description: SDD pipeline implementer — writes code to satisfy a task specification.
 mode: subagent
-model: opencode-go/deepseek-v4-pro
+model: opencode-go/mimo-v2.5-pro
+hidden: true
 permission:
   edit: allow
   bash: "*": allow

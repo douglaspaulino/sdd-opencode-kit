@@ -1,7 +1,8 @@
 ---
 description: SDD pipeline fixer — applies feedback from the task-reviewer and code-reviewer.
 mode: subagent
-model: opencode-go/minimax-m2.7
+model: opencode-go/qwen3.7-plus
+hidden: true
 permission:
   edit: allow
   bash: "*": allow
