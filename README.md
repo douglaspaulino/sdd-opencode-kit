@@ -110,6 +110,20 @@ how much compute the model spends "thinking" before responding:
 > encode tier in the name itself (e.g. `qwen3.7-max`). For those, swap the
 > `model` field instead of setting `variant`.
 
+## Why different models per step
+
+Using the same LLM across all pipeline steps invites **self-confirmation
+bias** — the model tends to repeat the same reasoning errors and approve
+its own work. Mixing models breaks this cycle. Each step benefits from a
+different cognitive profile:
+
+| Pillar | What it means for SDD |
+|---|---|
+| **Specialization** | Each model is chosen for its strength — implementation, review, reasoning, speed. |
+| **Independence** | Who implements does not validate. Errors surface in review, not in self-check. |
+| **Cost × Performance** | Expensive models only where judgment matters. Fast models for repetitive verification. |
+| **Defense in depth** | Every step is a quality barrier before the next one. No single model is the bottleneck. |
+
 ## Model presets
 
 ### opencode go (subscription, request quotas)
