@@ -1,0 +1,6 @@
+.git/
+.gitignore
+install.sh
+*.md
+!README.md
+!LICENSE

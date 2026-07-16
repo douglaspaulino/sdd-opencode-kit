@@ -1,0 +1,30 @@
+{
+  "name": "sdd-opencode-kit",
+  "version": "1.0.0",
+  "description": "Spec-Driven Development (SDD) pipeline for opencode",
+  "bin": {
+    "sdd-install": "./bin/sdd-install.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/douglaspaulino/sdd-opencode-kit.git"
+  },
+  "keywords": [
+    "opencode",
+    "sdd",
+    "spec-driven-development",
+    "ai-coding",
+    "code-review"
+  ],
+  "author": "Douglas Santos",
+  "license": "MIT",
+  "files": [
+    "bin/",
+    "template/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

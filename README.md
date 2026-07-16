@@ -33,11 +33,50 @@ task so interrupted runs resume exactly where they stopped.
 
 ## Installation
 
+### Via npx (recommended)
+
+> **Note:** npm v10+ requires `--allow-git` to fetch packages from GitHub.
+> Run the command below **once** to allow git dependencies, then use `npx` normally:
+> ```sh
+> npm config set allow-git all
+> ```
+
+```sh
+# Install globally (for all projects)
+npx github:douglaspaulino/sdd-opencode-kit --global
+
+# Install into a specific repository
+npx github:douglaspaulino/sdd-opencode-kit /path/to/your/repo
+
+# Install into a repository, tracking execution state in git
+npx github:douglaspaulino/sdd-opencode-kit /path/to/your/repo --track-state
+
+# Interactive mode (prompts for choices)
+npx github:douglaspaulino/sdd-opencode-kit
+```
+
+**If you prefer not to configure npm**, use the `--allow-git` flag directly:
+
+```sh
+npx --allow-git all github:douglaspaulino/sdd-opencode-kit --global
+npx --allow-git all github:douglaspaulino/sdd-opencode-kit /path/to/your/repo
+```
+
+### Via npm global install
+
+```sh
+npm install --allow-git all -g github:douglaspaulino/sdd-opencode-kit
+sdd-install --global
+sdd-install /path/to/your/repo
+```
+
+### Legacy (install.sh)
+
 ```sh
 ./install.sh /path/to/your/repo [--track-state]
 ```
 
-Copies `template/.opencode/` into the target repo (never overwrites existing
+All methods copy `template/.opencode/` into the target (never overwrites existing
 files) and adds `.sdd/runs/` to `.gitignore` (use `--track-state` to version
 state instead). Restart opencode in the target repo afterwards.
 
