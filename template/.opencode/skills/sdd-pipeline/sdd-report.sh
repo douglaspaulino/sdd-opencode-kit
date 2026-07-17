@@ -298,35 +298,141 @@ if len(all_decisions) > 0:
 
 # ── /init prompt generation ────────────────────────────────────
 
-# detect technology stack from findings and model context
-tech_stack = []
-stack_keywords = {
-    'Java 17+': ['java', 'jpa', 'spring', 'hibernate', 'mockito', 'junit', 'testcontainers', 'flyway', 'lombok'],
-    'Spring Boot': ['spring', 'boot', 'restcontroller', 'service', 'repository', 'jparepository'],
-    'PostgreSQL': ['postgresql', 'postgres', 'psql', 'jdbc'],
-    'React/TypeScript': ['react', 'tsx', 'typescript', 'javascript', 'frontend', 'component'],
-    'SCSS/CSS': ['scss', 'css', 'style', 'sass'],
-    'Maven': ['mvn', 'maven', 'pom.xml'],
-    'Docker': ['docker', 'container', 'image'],
-}
+# classify text into codebase areas
+BACKEND_KW = ['java', 'spring', 'jpa', 'hibernate', 'repository', 'entity', 'dto', 'mapper',
+              'controller', 'service', 'junit', 'mockito', 'mvn', 'maven', 'sql', 'migration',
+              'enum', '@enumerated', 'indexer', 'column', 'table', 'endpoint', 'api']
+FRONTEND_KW = ['angular', 'component', 'template', 'html', 'scss', 'css', 'i18n', 'typescript',
+               'modal', 'snackbar', 'toast', 'checkbox', 'toggle', 'rxjs', 'ng-', 'routing',
+               '@component', 'chart', 'legend', 'tooltip', 'card', 'button', 'formcontrol']
+DB_KW = ['sql', 'migration', 'postgresql', 'mysql', 'column', 'table', 'index', 'fk', 'constraint',
+         'ddl', 'database', 'schema', 'varchar', 'innodb']
+
+def classify_codebase(text):
+    text_l = text.lower()
+    scores = {'backend': 0, 'frontend': 0, 'database': 0}
+    for kw in BACKEND_KW:
+        if kw in text_l: scores['backend'] += 1
+    for kw in FRONTEND_KW:
+        if kw in text_l: scores['frontend'] += 1
+    for kw in DB_KW:
+        if kw in text_l: scores['database'] += 1
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 1 else 'general'
+
+# categorize findings
+cb_findings = {'backend': [], 'frontend': [], 'database': [], 'general': []}
+for f in all_findings:
+    cb = classify_codebase(f['text'])
+    cb_findings[cb].append(f)
+
+# categorize decisions
+cb_decisions = {'backend': [], 'frontend': [], 'database': [], 'general': []}
+for d in all_decisions:
+    cb = classify_codebase(d)
+    cb_decisions[cb].append(d)
+
+# detect technology stack per codebase
+stack_backend = []
+stack_frontend = []
+stack_db = []
+
 all_text = ' '.join(f['text'].lower() for f in all_findings)
 for t in tasks:
     for rn, rp in t.get('reports', {}).items():
         all_text += ' ' + rp.lower()[:2000]
 
-for stack_name, keywords in stack_keywords.items():
-    if any(kw in all_text for kw in keywords):
-        tech_stack.append(stack_name)
+if any(kw in all_text for kw in ['java', 'spring', 'jpa', 'hibernate']):
+    stack_backend.append('Java 17+')
+    stack_backend.append('Spring Boot')
+if any(kw in all_text for kw in ['mvn', 'maven']):
+    stack_backend.append('Maven')
+if any(kw in all_text for kw in ['junit', 'mockito', 'testcontainers']):
+    stack_backend.append('JUnit 5 + Mockito')
 
-if not tech_stack:
-    tech_stack = ['(detect from project files: pom.xml, package.json, etc.)']
+if any(kw in all_text for kw in ['angular', '@component', 'ng-']):
+    stack_frontend.append('Angular')
+else:
+    stack_frontend.append('Angular/TypeScript')
+if any(kw in all_text for kw in ['scss', 'sass']):
+    stack_frontend.append('SCSS')
+if any(kw in all_text for kw in ['jasmine', 'karma', 'ng test']):
+    stack_frontend.append('Jasmine + Karma')
 
-# build skill recommendations list
-skill_list = ', '.join(f'@{s["name"]}' for s in skill_suggestions) if skill_suggestions else '(none suggested)'
+if any(kw in all_text for kw in ['postgresql', 'postgres', 'mysql', 'sql']):
+    stack_db.append('PostgreSQL')
 
-# top themes for code review priorities
-top_themes = sorted(finding_themes.items(), key=lambda x: -x[1])[:5]
-themes_text = ', '.join(f'{theme} ({count})' for theme, count in top_themes) if top_themes else 'none detected'
+stack_backend = stack_backend or ['Java', 'Spring Boot']
+stack_frontend = stack_frontend or ['Angular/TypeScript']
+stack_db = stack_db or ['(detect from migrations)']
+
+# build per-codebase conventions
+def build_conventions(findings_list):
+    lines = set()
+    for f in findings_list:
+        text = f['text'].lower()
+        if 'extend' in text and 'scss' in text:
+            lines.add('Avoid SCSS @extend self-references — use mixins or direct classes')
+        if 'enum' in text and ('string' in text or 'type' in text):
+            lines.add('Use enums with @Enumerated(STRING) for bounded domain values — never String')
+        if 'uuid' in text and ('exposed' in text or 'route' in text or 'public' in text):
+            lines.add('UUID as public identifier; numeric IDs never exposed in API paths/routes')
+        if 'toast' in text or 'snackbar' in text:
+            lines.add('Show success/error feedback via MatSnackBar (toast) after CRUD operations')
+        if 'loading' in text or 'empty' in text or 'error' in text:
+            lines.add('Every view must handle loading, empty, and error states')
+        if 'toggle' in text and 'checkbox' in text:
+            lines.add('Use toggle switches for boolean settings, not plain checkboxes')
+        if 'naming' in text or 'rename' in text:
+            lines.add('Match existing naming patterns — check conventions before introducing new names')
+        if 'i18n' in text:
+            lines.add('All user-facing strings must use i18n keys, not hardcoded text')
+        if '@responsebody' in text and 'restcontroller' in text:
+            lines.add('No redundant @ResponseBody on @RestController methods')
+        if 'mapper' in text or 'dto' in text:
+            lines.add('Use DTOs with explicit mappers; never expose entities in API responses')
+    return sorted(lines)
+
+cb_conventions = {}
+for cb_name in ['backend', 'frontend', 'database']:
+    cb_conventions[cb_name] = build_conventions(cb_findings[cb_name])
+
+# build per-codebase theme counts
+def theme_counts_for(findings_list):
+    tc = Counter()
+    for f in findings_list:
+        text = f['text'].lower()
+        for theme, keywords in [
+            ('test coverage', ['test', 'tdd', 'coverage', 'untest']),
+            ('spec compliance', ['spec', 'compliance', 'requirement', 'deviation']),
+            ('type safety', ['enum', 'string', 'type', 'integer', 'long']),
+            ('naming conventions', ['naming', 'rename', 'convention', 'method name']),
+            ('scss/styles', ['scss', 'css', 'style', 'extend', 'class']),
+            ('api design', ['endpoint', 'controller', 'api', 'parameter', 'signature']),
+            ('error handling', ['error', 'exception', 'catch', 'handle']),
+            ('ui/ux patterns', ['modal', 'toast', 'snackbar', 'loading', 'empty', 'toggle', 'checkbox', 'button', 'card']),
+            ('performance', ['performance', 'slow', 'optimize', 'cache']),
+        ]:
+            if any(kw in text for kw in keywords):
+                tc[theme] += 1
+    return tc
+
+cb_themes = {}
+for cb_name in ['backend', 'frontend', 'database']:
+    tc = theme_counts_for(cb_findings[cb_name])
+    top = sorted(tc.items(), key=lambda x: -x[1])[:3]
+    cb_themes[cb_name] = ', '.join(f'{t} ({c})' for t, c in top) if top else 'none detected'
+
+# build ADR suggestions per codebase
+cb_adrs = {}
+for cb_name in ['backend', 'frontend', 'database']:
+    decs = cb_decisions[cb_name]
+    if decs:
+        # summarize to keep prompt compact
+        short = [d[:120].replace('- ', '').strip() for d in decs]
+        cb_adrs[cb_name] = '\n    - ' + '\n    - '.join(short[:6])
+    else:
+        cb_adrs[cb_name] = ' (none in this run)'
 
 # model assignments
 model_roles = {}
@@ -337,27 +443,50 @@ for t in tasks:
             model_roles[sn] = m
 model_text = ', '.join(f'{sn}={m}' for sn, m in sorted(model_roles.items())) if model_roles else 'varies'
 
-# conventions from findings
-convention_lines = []
-for f in all_findings:
-    text = f['text'].lower()
-    if 'extend' in text and 'scss' in text:
-        convention_lines.append('Avoid SCSS @extend self-references — use mixins or direct classes')
-    if 'enum' in text and ('string' in text or 'type' in text):
-        convention_lines.append('Use enums with @Enumerated(STRING) for bounded domain values — never String')
-    if 'naming' in text or 'rename' in text:
-        convention_lines.append('Follow project naming conventions (check existing patterns first)')
-conventions_text = '\n   - ' + '\n   - '.join(convention_lines[:5]) if convention_lines else ' (review findings for patterns)'
+# skill list
+skill_list = ', '.join(f'@{s["name"]}' for s in skill_suggestions) if skill_suggestions else '(none suggested)'
 
-init_prompt = f'''/init Enhance AGENTS.md for this project using .sdd/report.html as evidence. Add or update:
+# build combined /init prompt with per-codebase sections
+init_prompt = '/init Analyze .sdd/report.html and the codebase, then enhance AGENTS.md with per-codebase sections:\n'
 
-- Technology stack: {', '.join(tech_stack)}
-- Testing standards: TDD with RED→GREEN cycles. Test output must be pristine (no warnings). Run full suite before reporting.
-- Code review priorities: {themes_text}
-- Conventions:{conventions_text}
+# Backend section
+init_prompt += f'''
+### Backend ({", ".join(stack_backend + stack_db)})
+- Testing: TDD with RED→GREEN cycles. Run `mvn test` before reporting. Output must be pristine.
+- Code review priorities: {cb_themes['backend']}
+- Conventions:'''
+if cb_conventions['backend']:
+    for c in cb_conventions['backend']:
+        init_prompt += f'\n  - {c}'
+else:
+    init_prompt += '\n  - (review findings for patterns)'
+init_prompt += f'''
+- ADR candidates:{cb_adrs['backend']}'''
+
+# Frontend section
+init_prompt += f'''
+
+### Frontend ({", ".join(stack_frontend)})
+- Testing: TDD with RED→GREEN cycles. Run `ng test` before reporting. Output must be pristine.
+- Code review priorities: {cb_themes['frontend']}
+- Conventions:'''
+if cb_conventions['frontend']:
+    for c in cb_conventions['frontend']:
+        init_prompt += f'\n  - {c}'
+else:
+    init_prompt += '\n  - (review findings for patterns)'
+init_prompt += f'''
+- ADR candidates:{cb_adrs['frontend']}'''
+
+# Cross-cutting section
+init_prompt += f'''
+
+### Cross-cutting (all codebases)
 - Auto-load skills: {skill_list}
-- Pipeline models: {model_text}
-- Architecture decisions: {len(all_decisions)} recorded across {len(tasks)} tasks — review report for ADR candidates'''
+- Pipeline model assignments: {model_text}
+- All tasks: {len(tasks)} total, {len(completed)} completed, {len(failed)} failed, ${total_cost_all:.2f} total cost
+- {len(all_findings)} findings across {len(tasks)} tasks — address recurring patterns in AGENTS.md
+- {len(all_decisions)} architecture decisions recorded — flag the most impactful as ADRs'''
 
 # ── HTML generation ───────────────────────────────────────────
 
@@ -630,9 +759,9 @@ if not skill_suggestions and not ref_suggestions:
 
 # ── /init PROMPT ──
 html += '<h2>Prompt for /init</h2>'
-html += '<p style="color:#8b949e;font-size:14px;margin-bottom:12px">Copy this prompt into opencode to increment the project\'s AGENTS.md based on pipeline findings.</p>'
+html += '<p style="color:#8b949e;font-size:14px;margin-bottom:12px">Copy this prompt into opencode to increment AGENTS.md with per-codebase sections — conventions, test rules, ADR candidates, and skill assignments extracted from the pipeline findings.</p>'
 html += '<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:16px;position:relative">'
-html += f'<button onclick="copyInitPrompt()" style="position:absolute;top:8px;right:8px;background:#30363d;color:#c9d1d9;border:none;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:12px" id="copyBtn">Copy</button>'
+html += '<button onclick="copyInitPrompt()" style="position:absolute;top:8px;right:8px;background:#30363d;color:#c9d1d9;border:none;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:12px" id="copyBtn">Copy</button>'
 html += f'<pre style="white-space:pre-wrap;font-family:monospace;font-size:13px;color:#e1e4e8;line-height:1.6;margin:0;padding-top:8px" id="initPrompt">{esc(init_prompt)}</pre>'
 html += '</div>'
 
