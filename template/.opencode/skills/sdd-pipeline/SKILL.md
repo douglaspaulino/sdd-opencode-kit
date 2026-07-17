@@ -5,12 +5,16 @@ description: Use ONLY when executing the /sdd command to process task files thro
 
 # SDD Pipeline
 
-Mandatory 5-step pipeline:
+Mandatory pipeline:
 
-    implementer → task-reviewer → fixer → code-reviewer → verifier
+    implementer → task-reviewer → fixer (if changes_requested) → code-reviewer → verifier
 
-No step may be skipped. Fixer always runs. Reviewers and verifier cannot
-edit code (permission-enforced, not prompt-level).
+Fixer runs only when task-reviewer verdict is `changes_requested`.
+When verdict is `approved`, fixer is skipped (status: `skipped`).
+Reviewers and verifier cannot edit code (permission-enforced, not prompt-level).
+
+Implementers across independent tasks may be dispatched in parallel.
+Steps within a single task are always sequential.
 
 ## Controller discipline
 
@@ -101,8 +105,9 @@ Each task lives at `.sdd/runs/<runs-subpath>/<task-id>/`. The
       "finished_at": "ISO 8601"
     },
     "fixer": {
-      "status": "pending | in_progress | completed | failed",
+      "status": "pending | in_progress | completed | failed | skipped",
       "report": "fixer-report.md",
+      "skip_reason": "approved — no changes needed by task-reviewer",
       "executions": 0,
       "cost_usd": 0.0,
       "model": "",
@@ -140,7 +145,8 @@ Each task lives at `.sdd/runs/<runs-subpath>/<task-id>/`. The
 
 ### General rules
 
-1. Sequential only. Never parallelize steps.
+1. Steps within a task are sequential. Implementers across independent
+   tasks may run in parallel (see command/sdd.md).
 2. Set status to `in_progress` + `started_at` before running. Set
    `completed`/`failed` + `finished_at` after. Write report.
    Use actual ISO 8601 timestamps (current time); these will be
@@ -189,7 +195,9 @@ Each task lives at `.sdd/runs/<runs-subpath>/<task-id>/`. The
 
 - Subagent: `sdd-fixer`
 - Report: `.sdd/runs/<runs-subpath>/<task-id>/fixer-report.md`
-- Always runs. If approved with no issues, confirms.
+- Runs only when task-reviewer verdict is `changes_requested`.
+- When task-reviewer verdict is `approved`: mark fixer status `skipped`,
+  set `skip_reason`, skip to code-reviewer. Do not dispatch the fixer.
 
 ### Step 4: code-reviewer
 
@@ -204,6 +212,9 @@ Each task lives at `.sdd/runs/<runs-subpath>/<task-id>/`. The
 - Subagent: `sdd-verifier`
 - Report: `.sdd/runs/<runs-subpath>/<task-id>/verifier-report.md`
 - Verdict: `pass` | `fail`
+- Checks: confirms implementer report has TDD evidence + pristine test output.
+  Spot-checks the single most critical test. Does NOT re-run the full suite —
+  the implementer already ran it with evidence in the report.
 
 ## Verifier reject loop
 

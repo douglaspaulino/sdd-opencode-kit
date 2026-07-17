@@ -79,6 +79,18 @@ you're stuck on, what you tried, what kind of help you need.
 - [ ] Are assertions independent (not tautological)?
 - [ ] Is test output pristine (no stray warnings)?
 
+## Evidence
+
+Before reporting, run and capture output to the report:
+
+- **All tests:** `npx jest --passWithNoTests` or equivalent. Paste full output.
+- **Lint:** `npm run lint` or equivalent. Paste full output.
+- **Type-check:** `npm run typecheck` or `npx tsc --noEmit` if configured.
+- **Build:** if applicable, `npm run build`.
+
+The verifier will check these outputs — they must be in the report, not
+in separate files. Pristine output (no warnings, no errors) is mandatory.
+
 ## Report
 
 Write the full report to the path specified by the orchestrator
@@ -89,8 +101,10 @@ Write the full report to the path specified by the orchestrator
 3. **TDD evidence** — for each feature:
    - RED: command run + relevant failing output + why the failure was expected
    - GREEN: command run + passing output
-4. Test results (command run, pass/fail/skip counts)
-5. Any decisions or concerns
+4. Test results (command run, full pass/fail/skip output)
+5. Lint output (full command + output)
+6. Type-check output (full command + output)
+7. Any decisions or concerns
 
 Then report back with ONLY (under 15 lines — detail lives in the file):
 

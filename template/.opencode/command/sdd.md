@@ -1,5 +1,5 @@
 ---
-description: Runs the mandatory 5-step SDD pipeline on task files.
+description: Runs the mandatory SDD pipeline on task files.
 ---
 
 Load the sdd-pipeline skill first.
@@ -45,30 +45,67 @@ If `CONTEXT.md` exists at the project root, note its path for every
 subagent dispatch. If `.sdd/ledger.md` exists, read it — tasks marked
 complete are done, do not re-dispatch them.
 
-## Per task
+## Phase 1 — Parallel implementers
 
-1. `task-id` = filename, lowercase, hyphens.
-2. Read `.sdd/runs/<runs-subpath>/<task-id>/state.json` if exists.
-3. Resume from first `pending` step. Skip `completed`. Restart
-   `in_progress`.
-4. If no state file: create fresh with all steps `pending`,
-   `executions: 0`, `cost_usd: 0.0`, `model: ""`, `session_id: ""`.
-   Create `.sdd/runs/<runs-subpath>/<task-id>/` directory if needed.
-5. Dispatch each step via Task tool (`sdd-implementer`,
-   `sdd-task-reviewer`, `sdd-fixer`, `sdd-code-reviewer`,
-   `sdd-verifier`). Pass task file path + prior report paths + CONTEXT.md
-   path (if any).
-6. After each step: update `state.json` (increment `executions` before
-   dispatch; after, extract the session ID from the Task tool result and
-   run `bash ~/.config/opencode/skills/sdd-pipeline/sdd-cost.sh .sdd/runs/<runs-subpath>/<task-id>/state.json <step> <session-id>`).
-   **Never set cost_usd, model, execution counts, or session_id manually.
-   Never place them at state top-level.** Write report file, append to
-   `.sdd/ledger.md`.
-7. Implementer returning BLOCKED/NEEDS_CONTEXT → resolve and re-dispatch.
-8. Verifier `fail` + attempts < 3 → loop fixer → code-reviewer →
-   verifier.
-9. Verifier `fail` at attempt 3 → mark `failed`, next task.
-10. Verifier `pass` → mark `completed`, next task.
+For every pending task: create fresh state.json (if none exists),
+mark implementer `in_progress`, increment `executions`.
+
+Dispatch ALL implementers in a SINGLE message using multiple Task tool
+calls (one per task, `sdd-implementer`). This is the biggest latency win
+— implementers for independent tasks run concurrently.
+
+Pass each: task file path + CONTEXT.md path (if any) + expected report path.
+
+After ALL implementers return: run `sdd-cost.sh` for each, update
+state.json, write reports. If any returned BLOCKED/NEEDS_CONTEXT,
+resolve and re-dispatch that task's implementer separately.
+
+## Phase 2 — Per-task remaining steps
+
+For each task (in original sorted order), run steps 2–5 sequentially:
+
+### Step 2: task-reviewer
+
+Dispatch `sdd-task-reviewer`. Pass task file + implementer report +
+CONTEXT.md. Run `sdd-cost.sh` after return. Read verdict from report.
+
+### Step 3: fixer (CONDITIONAL)
+
+**If task-reviewer verdict is `approved`:**
+- Set fixer status to `skipped`, set `skip_reason` to
+  `"approved — no changes needed by task-reviewer"`.
+- Skip to code-reviewer. Do NOT dispatch the fixer subagent.
+- Do NOT run `sdd-cost.sh` for fixer — leave cost_usd at 0.0.
+
+**If task-reviewer verdict is `changes_requested`:**
+- Dispatch `sdd-fixer`. Pass task file + implementer report +
+  task-review report + CONTEXT.md. Run `sdd-cost.sh` after return.
+
+### Step 4: code-reviewer
+
+Dispatch `sdd-code-reviewer`. Pass task file + all prior reports +
+CONTEXT.md. Run `sdd-cost.sh` after return.
+
+### Step 5: verifier
+
+Dispatch `sdd-verifier`. Pass task file + all prior reports +
+attempt number + max attempts. Run `sdd-cost.sh` after return.
+
+Read verdict.
+
+### Verifier reject loop
+
+If `fail` and `attempts < max_attempts` (3):
+1. Increment `attempts`
+2. Reset fixer, code-reviewer, verifier status to `pending` (preserve
+   `executions`, `cost_usd`, `model`, `session_id` — never zero them)
+3. Pass verifier report to fixer as additional context
+4. Re-run fixer → code-reviewer → verifier
+
+If `attempts >= max_attempts` with verifier `fail`:
+- Mark task `failed`, next task.
+
+If `pass`: mark task `completed`, append to `.sdd/ledger.md`, next task.
 
 ## Summary
 

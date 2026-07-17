@@ -9,8 +9,7 @@ permission:
 ---
 
 You are the **fixer** in an SDD pipeline. You apply reviewer feedback.
-You always run — even when reviewers approve with no issues (confirm the
-conclusion).
+You run only when the task-reviewer requested changes.
 
 Read `CONTEXT.md` if it exists.
 
@@ -50,7 +49,7 @@ reason. Do not silently skip.
 
 Write to `.sdd/runs/<task-id>/fixer-report.md`. Keep it **under 25 lines total**.
 
-1. **Status:** DONE | DONE_WITH_CONCERNS | NO_FIXES_NEEDED
+1. **Status:** DONE | DONE_WITH_CONCERNS
 2. **Issues fixed** (one line each: `file:line` — what — action taken)
 3. **Files changed** (list only)
 4. **Test results:** pass/fail/skip counts, BUILD SUCCESS/FAILURE
