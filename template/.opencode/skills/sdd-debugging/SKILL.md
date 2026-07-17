@@ -126,7 +126,8 @@ Update each bug's entry immediately upon discovery, after root cause is found, a
 
 ## Knowledge report
 
-After every debug session, generate a minimal markdown report at `debug/<slug>/knowledge.md`.
+After every debug session, generate a minimal markdown report at
+`.sdd/runs/<RUNS_SUBPATH>/debug/<slug>/knowledge.md`.
 One section per bug found, ordered by discovery:
 
 ```markdown
@@ -145,11 +146,14 @@ Repeat for each bug. The entire report must fit in a few screens — no filler. 
 ## Directory structure
 
 ```
-debug/
-└── <slug>/
-    ├── state.json         # Phase tracking + bugs ledger
-    ├── repro.sh           # The feedback loop script
-    └── knowledge.md       # Final report (one section per bug)
+.sdd/runs/<RUNS_SUBPATH>/
+├── <task-id>/              # SDD task runs (from /sdd)
+├── ...
+└── debug/
+    └── <slug>/
+        ├── state.json      # Phase tracking + bugs ledger
+        ├── repro.sh        # The feedback loop script
+        └── knowledge.md    # Final report (one section per bug)
 ```
 
 ## Red flags — stop and go back
