@@ -63,20 +63,16 @@ You receive the task file, the implementer report, and prior step data.
 
 ## Output
 
-Write to `.sdd/runs/<task-id>/task-review.md`:
+Write to `.sdd/runs/<task-id>/task-review.md`. Keep it **under 35 lines total**.
+Every issue must include `file:line`.
 
 ### Verdict
-`approved` or `changes_requested` (MUST be one of these)
-
-If `approved`, explicitly state zero actionable issues.
-
-### Spec Compliance
-- ✅ Compliant | ❌ Issues found (with file:line)
-- ⚠️ Cannot verify from diff: (items to check separately)
+**approved** or **changes_requested** (bold, one of these two)
 
 ### Issues
 #### Critical (Must Fix)
 #### Important (Should Fix)
 #### Minor (Nice to Have)
 
-Each issue: `file:line` — what's wrong — why it matters — suggested fix.
+Each issue: `file:line` — what's wrong — why — fix (1-3 lines each).
+No empty sections. No summary. No spec checklist. No TDD table.

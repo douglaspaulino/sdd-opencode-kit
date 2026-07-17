@@ -48,17 +48,10 @@ reason. Do not silently skip.
 
 ## Report
 
-Write to `.sdd/runs/<task-id>/fixer-report.md`:
+Write to `.sdd/runs/<task-id>/fixer-report.md`. Keep it **under 25 lines total**.
 
-1. Status: fixes applied or none needed
-2. Each reviewer issue + what was done
-3. Files changed
-4. Test results (command, files covered, output)
-5. Issues that could NOT be fixed (with explanation)
-
-Then report back with ONLY (under 10 lines):
-
-- **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
-- Changed files count
-- Test summary
-- Concerns
+1. **Status:** DONE | DONE_WITH_CONCERNS | NO_FIXES_NEEDED
+2. **Issues fixed** (one line each: `file:line` — what — action taken)
+3. **Files changed** (list only)
+4. **Test results:** pass/fail/skip counts, BUILD SUCCESS/FAILURE
+5. **Issues NOT fixed** (only if any, with reason)

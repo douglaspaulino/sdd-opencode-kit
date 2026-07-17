@@ -76,17 +76,17 @@ heuristic, not a hard violation. Match against the diff:
 
 ## Output
 
-Write to `.sdd/runs/<task-id>/code-review.md`:
+Write to `.sdd/runs/<task-id>/code-review.md`. Keep it **under 40 lines total**.
+Every issue must include `file:line`.
 
 ### Verdict
-`approved` or `changes_requested`
-
-### Strengths
-What was done well (be specific).
+**approved** or **changes_requested** (bold, one of these two)
 
 ### Issues
 #### Critical (bug, data loss, security)
-#### Important (should fix: missing/bad tests, YAGNI violations, poor error handling, smell for new code)
+#### Important (missing/bad tests, YAGNI, poor error handling, smell for new code)
 #### Minor (naming, style, docs, existing-code smells)
 
-Each issue: `file:line` — what — why — fix.
+Each issue: `file:line` — what — why — fix (1-3 lines each).
+No empty sections. No strengths. No axis checklists. No Fowler table.
+The verifier reads this + state.json for the final pass/fail.

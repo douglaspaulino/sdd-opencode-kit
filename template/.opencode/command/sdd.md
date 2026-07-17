@@ -11,6 +11,15 @@ $ARGUMENTS = single file or directory.
 - Directory: glob `$ARGUMENTS/*.md`, sorted alphabetically.
 - No tasks → tell user, stop.
 
+Derive `RUNS_SUBPATH`: strip leading `.scratch/` prefix from
+$ARGUMENTS, then strip any trailing filename to keep only the
+directory portion. If no `.scratch/` prefix, use the full relative
+directory path. Examples:
+  `.scratch/renda-fixa-foundation/issues/` → `renda-fixa-foundation/issues`
+  `.scratch/proj/tasks/issue-42.md`       → `proj/tasks`
+  `my-tasks/`                             → `my-tasks`
+Use `.sdd/runs/<runs-subpath>/<task-id>/` for all run artifacts.
+
 ## Branch setup
 
 Before any task execution, ask the user:
@@ -39,15 +48,21 @@ complete are done, do not re-dispatch them.
 ## Per task
 
 1. `task-id` = filename, lowercase, hyphens.
-2. Read `.sdd/runs/<task-id>/state.json` if exists.
+2. Read `.sdd/runs/<runs-subpath>/<task-id>/state.json` if exists.
 3. Resume from first `pending` step. Skip `completed`. Restart
    `in_progress`.
-4. If no state file: create fresh with all steps `pending`.
+4. If no state file: create fresh with all steps `pending`,
+   `executions: 0`, `cost_usd: 0.0`, `model: ""`, `session_id: ""`.
+   Create `.sdd/runs/<runs-subpath>/<task-id>/` directory if needed.
 5. Dispatch each step via Task tool (`sdd-implementer`,
    `sdd-task-reviewer`, `sdd-fixer`, `sdd-code-reviewer`,
    `sdd-verifier`). Pass task file path + prior report paths + CONTEXT.md
    path (if any).
-6. After each step: update `state.json`, write report file, append to
+6. After each step: update `state.json` (increment `executions` before
+   dispatch; after, extract the session ID from the Task tool result and
+   run `bash ~/.config/opencode/skills/sdd-pipeline/sdd-cost.sh .sdd/runs/<runs-subpath>/<task-id>/state.json <step> <session-id>`).
+   **Never set cost_usd, model, execution counts, or session_id manually.
+   Never place them at state top-level.** Write report file, append to
    `.sdd/ledger.md`.
 7. Implementer returning BLOCKED/NEEDS_CONTEXT → resolve and re-dispatch.
 8. Verifier `fail` + attempts < 3 → loop fixer → code-reviewer →
@@ -57,7 +72,8 @@ complete are done, do not re-dispatch them.
 
 ## Summary
 
-Print table: task file, final status, step of failure (if any), attempts.
+Print table: task file, final status, step of failure (if any), attempts,
+total cost USD (sum of all `steps.<step>.cost_usd`).
 
 ## Branch teardown
 

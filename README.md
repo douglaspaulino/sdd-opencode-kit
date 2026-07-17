@@ -76,6 +76,26 @@ sdd-install /path/to/your/repo
 ./install.sh /path/to/your/repo [--track-state]
 ```
 
+### Via local clone (no GitHub push required)
+
+```sh
+# Clone the kit locally
+git clone https://github.com/douglaspaulino/sdd-opencode-kit.git
+
+# Install globally (for all projects)
+node sdd-opencode-kit/bin/sdd-install.js --global
+
+# Install into a specific repository
+node sdd-opencode-kit/bin/sdd-install.js /path/to/your/repo
+
+# Install with state tracking in git
+node sdd-opencode-kit/bin/sdd-install.js /path/to/your/repo --track-state
+```
+
+The script copies `template/.opencode/` into the target and overwrites
+existing files. After making changes to the template, re-run the install
+command to update your global or local installation — no push needed.
+
 All methods copy `template/.opencode/` into the target, overwriting existing
 files to ensure you always have the latest version, and adds `.sdd/runs/` to
 `.gitignore` (use `--track-state` to version state instead). Restart opencode
