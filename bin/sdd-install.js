@@ -17,7 +17,8 @@ const SDD_AGENTS_CONFIG = {
   'sdd-task-reviewer': { hidden: true },
   'sdd-fixer':         { hidden: true },
   'sdd-verifier':      { hidden: true },
-  'sdd-debugger':      { hidden: true }
+  'sdd-debugger':      { hidden: true },
+  'sdd-quickfix':      { hidden: true }
 };
 
 function showUsage() {
