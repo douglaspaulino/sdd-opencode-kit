@@ -105,6 +105,9 @@ After each probe: confirmed? → Phase 6. Not confirmed? → New hypothesis.
 
 ## Bug tracking in state.json
 
+The debug `state.json` includes `repos: ["."]` — the list of repos
+affected by the bugs. Populated by the debugger after investigation.
+
 Each bug discovered during debugging is registered as a step under `bugs` in `state.json`. The schema:
 
 ```json

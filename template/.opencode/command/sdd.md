@@ -22,22 +22,41 @@ Use `.sdd/runs/<runs-subpath>/<task-id>/` for all run artifacts.
 
 ## Branch setup
 
-Before any task execution, ask the user:
+Before any task execution, read all task files to collect the
+`## Repositories` section. For each task, parse the list of repos:
 
-> Create a new branch for this SDD run? (y/n)
+```
+## Repositories
+- ../project-x (main)
+- ../project-b (develop)
+```
+
+If a task has no `## Repositories` section, it uses `["."]` (current repo
+only). Collect all unique repos with their base branches.
+
+Ask the user:
+
+> Create branches for this SDD run across all affected repos? (y/n)
 
 If **yes**:
-1. Record the current branch: `ORIG_BRANCH=$(git branch --show-current)`.
-   If in detached HEAD, ask the user which branch to merge back to.
-2. Create and switch to a new branch:
-   `git checkout -b sdd/<slug-from-first-task>`.
+1. Derive the slug from the first task filename.
+2. For each unique repo:
+   - `cd <repo_path>`
+   - Record `ORIG_BRANCH=$(git branch --show-current)`. If detached HEAD,
+     ask the user which branch to merge back to.
+   - `git checkout -b sdd/<slug>`.
 3. Store metadata in `.sdd/branch.json`:
    ```json
-   { "original_branch": "main", "sdd_branch": "sdd/issue-42" }
+   {
+     "slug": "<slug>",
+     "branches": [
+       { "repo": ".", "repo_path": "/abs/path", "original_branch": "main", "sdd_branch": "sdd/<slug>" },
+       { "repo": "../project-x", "repo_path": "/abs/path/project-x", "original_branch": "main", "sdd_branch": "sdd/<slug>" }
+     ]
+   }
    ```
-4. All subsequent work happens on this branch.
 
-If **no**: work on the current branch directly. Skip branch metadata.
+If **no**: work on current branches directly. Skip branch metadata.
 
 ## Pre-flight
 
@@ -54,11 +73,15 @@ Dispatch ALL implementers in a SINGLE message using multiple Task tool
 calls (one per task, `sdd-implementer`). This is the biggest latency win
 — implementers for independent tasks run concurrently.
 
-Pass each: task file path + CONTEXT.md path (if any) + expected report path.
+Pass each: task file path + CONTEXT.md path (if any) + expected report
+path + `repos` array from the task's `## Repositories` section (or `["."]`
+if absent) + the `slug` from `.sdd/branch.json` (or a generated slug).
 
 After ALL implementers return: run `sdd-cost.sh` for each, update
-state.json, write reports. If any returned BLOCKED/NEEDS_CONTEXT,
-resolve and re-dispatch that task's implementer separately.
+state.json (read the `repos` field from each task's state.json — the
+implementer may have expanded it), write reports. If any returned
+BLOCKED/NEEDS_CONTEXT, resolve and re-dispatch that task's implementer
+separately.
 
 ## Phase 2 — Per-task remaining steps
 
@@ -114,15 +137,20 @@ total cost USD (sum of all `steps.<step>.cost_usd`).
 
 ## Branch teardown
 
-If a branch was created (`.sdd/branch.json` exists):
+If branches were created (`.sdd/branch.json` exists):
 
 1. Print the branch name and completion status for all tasks.
-2. Ask the user:
-   > Merge `sdd/<branch>` back into `<original_branch>`? (y/n)
-3. If **yes**:
+
+2. For each branch entry in `.sdd/branch.json`, ask the user:
+   > Merge `sdd/<slug>` in `<repo>` back into `<original_branch>`? (y/n)
+
+   If **yes**:
+   - `cd <repo_path>`
    - `git checkout <original_branch>`
-   - `git merge sdd/<branch> --no-ff -m "sdd: merge completed SDD cycle"`
-   - `git branch -d sdd/<branch>`
-   - `rm .sdd/branch.json`
-4. If **no**: stay on the SDD branch for manual review. Tell the user
-   the branch name and how to merge or discard it.
+   - `git merge sdd/<slug> --no-ff -m "sdd: merge completed SDD cycle"`
+   - `git branch -d sdd/<slug>`
+
+   If **no**: tell the user the repo path, branch name, and how to merge
+   or discard it manually.
+
+3. After all repos processed: `rm .sdd/branch.json`.

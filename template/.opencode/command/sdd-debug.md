@@ -33,6 +33,7 @@ All artifacts go under `.sdd/runs/<RUNS_SUBPATH>/debug/<slug>/`.
   "runs_subpath": "<RUNS_SUBPATH>",
   "slug": "<slug>",
   "problem": "<user's description>",
+  "repos": ["."],
   "phase": 1,
   "status": "in_progress",
   "started_at": "<ISO 8601>",

@@ -13,6 +13,12 @@ description, the `sdd-debugging` skill, a slug, a runs subpath, and paths
 for state and report output. You execute the full 7-phase systematic
 debugging process.
 
+After identifying affected repos (from the problem description or by
+inspecting the codebase), write the `repos` array to `state.json`:
+`["."]` if only the current repo, or paths to sibling repos if the bug
+spans multiple projects. This enables the debug command to create
+branches in all affected repos if needed.
+
 Load the sdd-debugging skill. Follow its phases strictly.
 
 ## Phases

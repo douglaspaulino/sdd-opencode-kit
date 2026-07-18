@@ -38,10 +38,23 @@ Steps within a single task are always sequential.
   ledger marks complete.
 
 - **Branch lifecycle.** At `/sdd` start, ask the user whether to create
-  a new branch for the run. If yes: record the original branch in
-  `.sdd/branch.json`, create `sdd/<slug>`, and work there. After all
-  tasks complete, ask whether to merge back with `--no-ff`. If declined,
-  leave the branch for manual review.
+  new branches for this SDD run. Collect all unique repos from all task
+  files' `## Repositories` section. For each unique repo:
+  - Record the current branch: `ORIG_BRANCH=$(git branch --show-current)`
+  - Create and switch to a new branch:
+    `git checkout -b sdd/<slug-from-first-task>`.
+  Store metadata in `.sdd/branch.json`:
+  ```json
+  {
+    "slug": "my-feature",
+    "branches": [
+      { "repo": ".", "original_branch": "main", "sdd_branch": "sdd/my-feature" },
+      { "repo": "../project-x", "original_branch": "main", "sdd_branch": "sdd/my-feature" }
+    ]
+  }
+  ```
+  If the user declines branch creation: skip all branch metadata and work
+  on current branches directly.
 
 - **CONTEXT.md.** If `CONTEXT.md` exists at the project root, include its
   path in every subagent dispatch. It maps project jargon to short terms
@@ -80,6 +93,7 @@ Each task lives at `.sdd/runs/<runs-subpath>/<task-id>/`. The
   "status": "in_progress | completed | failed",
   "attempts": 1,
   "max_attempts": 3,
+  "repos": ["."],
   "created_at": "ISO 8601",
   "updated_at": "ISO 8601",
   "steps": {
@@ -182,6 +196,10 @@ Each task lives at `.sdd/runs/<runs-subpath>/<task-id>/`. The
 - **TDD is mandatory.** The implementer works in RED → GREEN cycles.
   The report must include RED + GREEN evidence for every feature. The
   task-reviewer and code-reviewer verify this.
+- The implementer reads the task's `## Repositories` section to determine
+  which repos to modify. Falls back to `["."]` if absent.
+- After implementation, the implementer writes `repos` to state.json
+  (array of repo paths relative to the project root).
 - If BLOCKED/NEEDS_CONTEXT: resolve and re-dispatch.
 
 ### Step 2: task-reviewer
@@ -240,6 +258,7 @@ When using the Task tool, pass:
 - Current attempt number
 - Current step execution count (from `steps.<step>.executions`)
 - Expected report path
+- `repos` array (list of repos this task affects)
 
 Each subagent writes its own report. Reports are handoff — the next
 subagent reads them as files.
